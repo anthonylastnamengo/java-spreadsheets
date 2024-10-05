@@ -1,0 +1,18 @@
+User opens sheets
+User wants to open a previous file.
+
+User selects Open File:
+    FileLoading.java prompt.ask
+    User inputs a file path
+
+    program takes file path provided -> store in some variable Optional<String> filePath
+
+    program attempts to open filePath:
+
+    if filePath null or invalid:
+        prompt.message -> invalid file because + whatever
+        return
+
+    otherwise:
+    open filePath and read
+

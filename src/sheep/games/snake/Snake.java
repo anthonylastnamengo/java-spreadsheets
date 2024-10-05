@@ -1,308 +1,171 @@
 package sheep.games.snake;
 
-import sheep.expression.TypeError;
-import sheep.expression.basic.Nothing;
 import sheep.features.Feature;
 import sheep.games.random.RandomCell;
-import sheep.sheets.CellLocation;
 import sheep.sheets.Sheet;
 import sheep.ui.Perform;
 import sheep.ui.Prompt;
 import sheep.ui.Tick;
 import sheep.ui.UI;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-
+/**
+ * An implementation of the snake game for a sheets instance.
+ */
 public class Snake implements Feature, Tick {
-    // Stores whether snake game has started or not
-    private boolean started = false;
 
-    // Generates random cell for apple
+    /** A picker for a random cell */
     private RandomCell randomCell;
 
-    // Stores the next snake cells to be rendered
-    private List<CellLocation> nextSnakeCells;
+    /** Handler for food/apple spawning in the sheets */
+    private final AppleFactory appleFactory;
 
-    // Stores the old snake cells
-    private List<CellLocation> oldSnakeCells;
+    /** Handler for snake growth, movement and eating logic in the sheets */
+    private final SnakeFactory snakeFactory;
 
-    // Stores the apple cells
-    private List<CellLocation> appleCells;
+    /** Storage for the game state */
+    private final GameState gameState;
 
-    // Stores the current snakeHead
-    private CellLocation snakeHead;
+    /** Storage for the state of the sheet cells */
+    private final SnakeCellState cellState;
 
-    // Stores the current direction parsed from the keystroke
-    // Initially snake is travelling in south direction
-    private int currentRowShift = 1;
-    private int currentColShift = 0;
-    private boolean tickUpdate = false;
+    /** A renderer for the snake game in the sheets */
+    private final SnakeRender renderer;
 
-    Sheet sheet;
+    /** A checker for game over logic */
+    private final CheckGameOver checker;
 
-    @Override
-    public void register(UI ui) {
-        ui.onTick(this);
+    /** The sheet in which the user is playing Snake */
+    private final Sheet sheet;
 
-        ui.addFeature("snake", "Start Snake", new SnakeStart());
-
-        // Add movement functionality
-        // w -> up
-        ui.onKey("w", "Move Up", this.parseMove(-1, 0));
-        // a -> left
-        ui.onKey("a", "Move Left", this.parseMove(0, -1));
-        // s -> down
-        ui.onKey("s", "Move Down", this.parseMove(1, 0));
-        // d -> right
-        ui.onKey("d", "Move Right", this.parseMove(0, 1));
-
-    }
-
-    @Override
-    public boolean onTick(Prompt prompt) {
-        if (!started) {
-            return false;
-        } else {
-            nextSnake(currentRowShift, currentColShift);
-
-            if (checkLoss()) {
-                prompt.message("Game Over!");
-                reset();
-            } else if (checkWin()) {
-                prompt.message("You Won!");
-                reset();
-            }
-            // Render
-            playSnake();
-        }
-        return true;
-    }
-
-    private void reset() {
-        started = false;
-        sheet.clear();
-        this.oldSnakeCells = new ArrayList<>();
-        this.nextSnakeCells = new ArrayList<>();
-        this.appleCells = new ArrayList<>();
-        currentColShift = 0;
-        currentRowShift = 1;
-        snakeHead = null;
-
-    }
-
-    public void playSnake() {
-
-        // Clear the sheet before rendering the snake and apple
-        sheet.clear();
-
-        // Render the apples
-        appleRender(this.appleCells);
-
-        // Render the snake
-        snakeRender(this.nextSnakeCells);
-    }
-
-    // Rendering logic: renders apple and renders snake
-    private void appleRender(List<CellLocation> appleCells) {
-        for (int row = 0; row < sheet.getRows(); row++) {
-            for (int column = 0; column < sheet.getColumns(); column++) {
-
-                // Create a location object for the current cell
-                CellLocation location = new CellLocation(row, column);
-
-                // Check if the current cell is in the list of snake cells
-
-                if (appleCells.contains(location)) {
-                    // If the cell is part of the snake, update its value to represent the snake
-                    sheet.update(row, column, "2"); // Assuming "1" represents the snake's body
-                }
-            }
-        }
-    }
-
-    private void addApples() {
-        for (int row = 0; row < sheet.getRows(); row++) {
-            for (int column = 0; column < sheet.getColumns(); column++) {
-
-                CellLocation location = new CellLocation(row, column);
-
-                String cellValue = this.sheet.valueAt(location).render();
-
-                if (!Objects.equals(cellValue, "1") & !Objects.equals(cellValue, "")) {
-                    if (!appleCells.contains(location)) {
-                        appleCells.add(location);
-
-                    }
-                }
-            }
-        }
-    }
-
-    public void snakeRender(List<CellLocation> nextSnakeCells) {
-        // Iterate over all cells in the sheet
-        for (int row = 0; row < sheet.getRows(); row++) {
-            for (int column = 0; column < sheet.getColumns(); column++) {
-
-                // Create a location object for the current cell
-                CellLocation location = new CellLocation(row, column);
-
-                // Check if the current cell is in the list of snake cells
-                if (nextSnakeCells.contains(location)) {
-                    // If the cell is part of the snake, update its value to represent the snake
-                    sheet.update(row, column, "1"); // Assuming "1" represents the snake's body
-                }
-            }
-        }
-    }
-
-    private boolean checkLoss() {
-        return !this.sheet.contains(this.snakeHead) || hitItself();
-    }
-
-    private boolean checkWin() {
-        for (int row = 0; row < sheet.getRows(); row++) {
-            for (int column = 0; column < sheet.getColumns(); column++) {
-                CellLocation cell = new CellLocation(row, column);
-
-                if (Objects.equals(this.sheet.valueAt(cell).render(), "")) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    private boolean hitItself() {
-        HashSet<CellLocation> seen = new HashSet<>();
-        for (CellLocation location : nextSnakeCells) {
-            if(seen.contains(location)) {
-                return true;
-            }
-            seen.add(location);
-        }
-        return false;
-    }
-
+    /**
+     * Constructs a new Snake game
+     *
+     * @param sheet         The sheet in which to display the Snake game
+     * @param randomCell    The random cell picker to pick a new cell for an apple spawn
+     */
     public Snake(Sheet sheet, RandomCell randomCell) {
+        // Store the sheet and random cell input
         this.sheet = sheet;
         this.randomCell = randomCell;
-        this.nextSnakeCells = new ArrayList<>();
-        this.oldSnakeCells = new ArrayList<>();
-        this.appleCells = new ArrayList<>();
+
+        // Initialise the game state and cell state
+        this.gameState = new GameState();
+        this.cellState = new SnakeCellState();
+
+        // Initialise the factories for handling Apple and Snake logic
+        this.appleFactory = new AppleFactory(this.sheet, this.randomCell, this.cellState);
+        this.snakeFactory = new SnakeFactory(this.appleFactory, this.cellState);
+
+        // Initialise the game renderer and game over checker
+        this.renderer = new SnakeRender(this.sheet, this.cellState);
+        this.checker = new CheckGameOver(this.sheet, this.snakeFactory, this.cellState);
     }
 
-    // Passing the row shift and column shift into a new class
-    public Perform parseMove(int rowShift, int colShift) {
-        return new Move(rowShift, colShift);
+    /**
+     * Registers a feature to start a new Snake game, and registers key press listeners
+     *
+     * @param ui An arbitrary user interface for the Sheet
+     */
+    @Override
+    public void register(UI ui) {
+        // Run the game on each tick
+        ui.onTick(this);
+
+        // Add a feature to the Sheets to start a new Game of snake
+        ui.addFeature("snake", "Start Snake", new SnakeStart(this.gameState,
+                this.appleFactory,
+                this.snakeFactory,
+                this.sheet));
+
+        // Register movement functionality through a key press listener:
+        // w -> up
+        ui.onKey("w", "Move Up", this.parseMove("UP"));
+        // a -> left
+        ui.onKey("a", "Move Left", this.parseMove("LEFT"));
+        // s -> down
+        ui.onKey("s", "Move Down", this.parseMove("DOWN"));
+        // d -> right
+        ui.onKey("d", "Move Right", this.parseMove("RIGHT"));
+
+        ui.setTickSpeed(100);
     }
 
-    // New class for Move will compute the move
-    public class Move implements Perform {
-        private final int rowShift;
-        private final int colShift;
+    /**
+     * Details what actions the game should complete on each tick.
+     *
+     * @param prompt Provide a mechanism to interact with the user interface
+     *               after a tick occurs, if required.
+     *
+     * @return A boolean indicating whether the Sheet should continue ticking.
+     */
+    @Override
+    public boolean onTick(Prompt prompt) {
 
-        public Move(int rowShift, int colShift) {
-            this.rowShift = rowShift;
-            this.colShift = colShift;
-        }
+        // If the game has not started, do not tick
+        if (!this.gameState.isStarted()) {
+            return false;
 
-        @Override
-        public void perform(int row, int column, Prompt prompt) {
-            if (!started) {
-                return;
-            }
-            // Update the current direction when a move is performed
-            currentRowShift = rowShift;
-            currentColShift = colShift;
-        }
-    }
-
-    public void nextSnake(int rowShift, int colShift) {
-        copyOld();
-        // Initialise the previous snake to be the old snake
-
-        // Sets the new List<CellLocation> nextSnakeCells, returns void
-        // Takes in the oldSnakeCells, and applies a row shift and column shift to the head of the snake
-        // For each body segment after the head of the snake, shift row and column to match old row and column
-        // of piece before it
-        // add all new snake segments to a List<CellLocation> and set nextSnakeCells to be this
-
-        // Check if the next head of the snake coincides with an apple
-
-        int headRow = this.snakeHead.getRow();
-        int headCol = this.snakeHead.getColumn();
-
-        CellLocation nextHead = new CellLocation(headRow + rowShift, headCol + colShift);
-
-        // Update the head of the snake to the next position
-
-        this.nextSnakeCells = new ArrayList<>();
-        this.snakeHead = nextHead;
-
-        if(checkApple(this.snakeHead)) {
-            appleLogic();
-            this.tickUpdate = true;
-        }
-
-        this.nextSnakeCells.add(this.snakeHead);
-
-        // Update the body segments of the snake
-        for (int i = 0; i < oldSnakeCells.size() - 1; i++) {
-            this.nextSnakeCells.add(oldSnakeCells.get(i));
-        }
-    }
-    private void appleLogic() {
-        setApple();
-        appleCells.remove(this.snakeHead);
-    }
-    public void copyOld() {
-        if(this.oldSnakeCells.isEmpty()) {
-            this.oldSnakeCells.add(snakeHead);
         } else {
-            // Method initialises the new old cells list
-            this.oldSnakeCells = new ArrayList<>();
+            // Compute the next snake positions in the snake factory
+            this.snakeFactory.nextSnake(this.gameState.getCurrentRowShift(),
+                    this.gameState.getCurrentColShift());
 
-            this.oldSnakeCells.addAll(nextSnakeCells);
-
-            if (this.tickUpdate) {
-                this.oldSnakeCells.add(snakeHead);
-                tickUpdate = false;
+            // Checking for win/loss:
+            if (this.checker.checkLoss()) {
+                // If game has been lost
+                // Display losing message
+                prompt.message("Game Over!");
+                // Reset the sheet and game to blank
+                reset();
+            } else if (this.checker.checkWin()) {
+                // If game has been won
+                // Display winning message
+                prompt.message("You Won!");
+                // Reset the sheet and game to blank
+                reset();
             }
 
+            // Render the game of snake after computing next snake positions
+            this.renderer.playSnake();
         }
+
+        // Continue ticking the game
+        return true;
     }
 
-    public boolean checkApple(CellLocation nextHead) {
-        return appleCells.contains(nextHead);
+    /**
+     * Resets the game's states and clears the board.
+     */
+    private void reset() {
+        // Switch the game off
+        this.gameState.setStarted(false);
+
+        // Clear the sheet completely.
+        sheet.clear();
+
+        // Reset the old snake cells, apple cells and next snake cells
+        this.cellState.resetOldSnakeCells();
+        this.cellState.resetAppleCells();
+        this.cellState.resetNextSnakeCells();
+
+        // Reset to the default south movement for a new game
+        this.gameState.setCurrentRowShift(1);
+        this.gameState.setCurrentColShift(0);
+
+        // Reset the current snake head
+        this.snakeFactory.setSnakeHead(null);
+
     }
 
-    public class SnakeStart implements Perform {
-        @Override
-        public void perform(int row, int column, Prompt prompt) {
-            started = true;
-            // Spawn the head of the snake at the selected start position
-
-            newHead(row, column);
-            addApples();
-        }
-    }
-    public void newHead(int row, int column) {
-        // Create and set the newHead as specified by row and column
-        this.sheet.update(row, column, "1");
-        this.snakeHead = new CellLocation(row, column);
-    }
-
-    public void setApple() {
-        // Creates a new apple on the sheets.
-        CellLocation newApple = randomCell.pick();
-
-        if (nextSnakeCells.contains(newApple) || appleCells.contains(newApple)) {
-            return;
-        }
-        appleCells.add(newApple);
+    /**
+     * Parses the move from the register method into a new Move
+     *
+     * @param direction A string representing the direction to move
+     *
+     * @return A new move in the direction of the inputted move
+     */
+    public Perform parseMove(String direction) {
+        return new SnakeMove(direction, gameState);
     }
 
 }

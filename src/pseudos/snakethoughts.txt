@@ -1,0 +1,76 @@
+started = false
+---
+initialise:
+    a 'currentDirection' variable => String? e.g. "west"?
+    a List<CellLocation> nextSnakeCells -> to store new positions:
+
+    a List<CellLocation> appleCells -> stores current positions of apples
+    a List<CellLocation> oldSnakeCells -> stores old positions before computing next move
+
+    a CellLocation snakeHead = new CellLocation(head coords)
+
+
+
+Start:
+    started => true
+    snake spawns at mouse select
+    if no cell is selected, default cell spawn: 1, 1
+
+    snake spawns as a single tile of int value 1
+    initially snake heads south
+
+On Each Tick:
+    1. Check if user has inputted a new direction
+
+    2. Compute nextMove: (moving)
+        if input is in (w a s d):
+            w: move up => decrease row num
+            a: move left => decrease column num
+            s: move down => increase row num
+            d: move right => increase column num
+
+            In register method:
+                To compute the move:
+                    class ComputeMove(direction)
+                        will set the next CellLocation of the head
+
+
+        if no input || input is not in (w a s d):
+            The HEAD of the snake moves one tile in the direction it is currently heading.
+
+        Each tail piece follows the last position of the piece above it:
+            Have an oldSnakeCells list
+            Copy nextSnakecells -> oldSnakeCells
+
+            for each piece of the snake:
+            e.g. List<CellLocation>
+                Obtain index from oldSnakeCells list
+
+    3. If nextHead is at position of apple (eating)
+        call the RandomCell.pick() method
+        place a new food item with value "2" at the returned location.
+        Update old apple position with new head tile
+
+        snakeHead = new head
+
+        Add new snakeHead to top of nextSnakeCells
+
+        Add new apple position to List<CellLocation> appleCells
+
+
+    4. Render nextSnakeCells
+        Render appleCells
+
+
+Checklist:
+  /  1) Render in a snake at feature start
+  /  2) Implement default south movement
+  /  3) Implement wasd movement
+  /  4) Implement apple spawn and eat logic (no grow)
+  /  5) Implement grow logic
+  /      5.5) Implement snake trail logic
+  /  6) Implement Game Over Logic:
+  /      6.1) Implement self-hit logic
+  /      6.2) Implement wall-hit logic
+    ------
+    7) Test

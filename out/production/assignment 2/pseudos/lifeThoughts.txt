@@ -1,0 +1,14 @@
+Starting GOL:
+    started => true
+    Iterate through every cell in the Sheet.
+
+On each tick:
+    Iterate though sheet: row, col
+    CellLocation new row col whatever
+    For each location:
+        check neighbours
+    For each OnCell : OnCells, input into function that checks surrounding cells
+        Add
+
+Ending GOL:
+    started => false

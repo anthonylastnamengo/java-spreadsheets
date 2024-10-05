@@ -1,6 +1,6 @@
 package sheep.games.tetros;
 
-import sheep.games.tetros.Pieces.*;
+import sheep.games.tetros.pieces.*;
 import sheep.sheets.CellLocation;
 
 import java.util.List;
@@ -10,82 +10,67 @@ import java.util.List;
  */
 public class TetrosPieceFactory {
 
-    /** The contents of the sheet for rendering */
-    private final List<CellLocation> contents;
-
     /** The value that determines which piece to generate */
     private final int value;
 
-    /** The falling type to set in the main class */
-    private int fallingType;
+    private TetrosCellState cellState;
+    private TetrosGameState gameState;
 
     /**
-     * Constructs a new instance of the Piece class
-     * A piece is determined by its random value and its falling type.
+     * Constructs a new Tetros piece factory, which handles generation of new pieces
      *
-     * @param value         The value which determines what piece is being generated
-     * @param contents      The contents of the sheet that will render the piece generated
-     *
-     * @requires 0 <= values <= 6
+     * @param value         The value to generate the falling type tetromino
+     * @param cellState     The state of the sheet cells
+     * @param gameState     The state of the Tetros game
      */
-    public TetrosPieceFactory(int value, List<CellLocation> contents) {
+    public TetrosPieceFactory(int value, TetrosCellState cellState, TetrosGameState gameState) {
         this.value = value;
-        this.contents = contents;
-        this.fallingType = 0;
+
+        this.cellState = cellState;
+
+        this.gameState = gameState;
     }
 
     /**
      * Generates the new piece based on the value passed into the Piece instance
      */
     public void generatePiece() {
-        TetrosPiece newPiece;
-
+        // Initialise a new blank Piece
+        TetrosPiece newPiece = null;
         switch (this.value) {
+
+            // Initialise a new Piece type based on the input value
             case 1 -> {
-                PieceSeven sevenPiece = new PieceSeven();
-                sevenPiece.getPieceContents(this.contents);
-                fallingType = sevenPiece.getFallingType();
+                newPiece = new PieceSeven();
             }
             case 2 -> {
-                PieceFive fivePiece = new PieceFive();
-                fivePiece.getPieceContents(this.contents);
-                fallingType = fivePiece.getFallingType();
+                newPiece = new PieceFive();
             }
             case 3 -> {
-                PieceEight eightPiece = new PieceEight();
-                eightPiece.getPieceContents(this.contents);
-                fallingType = eightPiece.getFallingType();
+                newPiece = new PieceEight();
             }
             case 4 -> {
-                PieceThree threePiece = new PieceThree();
-                threePiece.getPieceContents(this.contents);
-                fallingType = threePiece.getFallingType();
+                newPiece = new PieceThree();
             }
             case 5 -> {
-                PieceSix sixPiece = new PieceSix();
-                sixPiece.getPieceContents(this.contents);
-                fallingType = sixPiece.getFallingType();
+                newPiece = new PieceSix();
             }
             case 6 -> {
-                PieceTwo twoPiece = new PieceTwo();
-                twoPiece.getPieceContents(this.contents);
-                fallingType = twoPiece.getFallingType();
+                newPiece = new PieceTwo();
             }
             case 0 -> {
-                PieceFour fourPiece = new PieceFour();
-                fourPiece.getPieceContents(this.contents);
-                fallingType = fourPiece.getFallingType();
+                newPiece = new PieceFour();
             }
-
         }
-    }
 
-    /**
-     * Gets the falling type denoted by the new Piece
-     *
-     * @return The falling type of the new Piece
-     */
-    public int getFallingType() {
-        return this.fallingType;
+
+        if (newPiece != null) {
+            // Depending on the piece generated:
+
+            // Update the contents of the sheet
+            newPiece.updatePieceContents(this.cellState.getContents());
+
+            this.gameState.setFallingType(newPiece.getFallingType());
+        }
     }
 }

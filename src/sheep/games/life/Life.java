@@ -12,20 +12,35 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Represents the Game of Life simulation.
+ * Implements the Feature and Tick interfaces for integration with the UI.
+ */
 public class Life implements Feature, Tick {
 
+    /** The sheet used to simulate the Game of Life. */
     private final Sheet sheet;
+
+    /** Stores whether the Game of Life simulation has started or not. */
     private boolean started = false;
 
+    /**
+     * Registers the features required for the Game of Life simulation.
+     *
+     * @param ui An instance of the UI class used to register features.
+     */
     @Override
     public void register(UI ui) {
         ui.onTick(this);
-        // Feature to start game of life simulation: gol-start
+        // Feature to start the Game of Life simulation
         ui.addFeature("gol-start", "Start Game of Life", new LifeStart());
-        // Feature to stop simulation: gol-end
+        // Feature to stop the Game of Life simulation
         ui.addFeature("gol-end", "Stop Game of Life", new LifeEnd());
     }
 
+    /**
+     * Represents the action of starting the Game of Life simulation.
+     */
     public class LifeStart implements Perform {
         @Override
         public void perform(int row, int column, Prompt prompt) {
@@ -34,6 +49,9 @@ public class Life implements Feature, Tick {
         }
     }
 
+    /**
+     * Represents the action of stopping the Game of Life simulation.
+     */
     public class LifeEnd implements Perform {
         @Override
         public void perform(int row, int column, Prompt prompt) {
@@ -41,41 +59,37 @@ public class Life implements Feature, Tick {
         }
     }
 
-
+    /**
+     * Constructs a Game of Life simulation with the specified sheet.
+     *
+     * @param sheet The sheet to use for the simulation.
+     */
     public Life(Sheet sheet) {
         this.sheet = sheet;
     }
 
-    // Appropriate tick callback to be registered
-    // When simulation is running, sheet is updated according to rules
+    /**
+     * Runs the Game of Life simulation on each tick.
+     *
+     * @param prompt The prompt to interact with the user interface.
+     * @return True if the simulation continues, false otherwise.
+     */
     @Override
     public boolean onTick(Prompt prompt) {
         if (!started) {
             return false;
         }
-        // Starts sim
         simulateLife(this.sheet);
         return true;
     }
 
+    /**
+     * Simulates the Game of Life on the provided sheet.
+     *
+     * @param sheet The sheet representing the current state of the simulation.
+     */
     public void simulateLife(Sheet sheet) {
-
         List<CellLocation> nextOns = new ArrayList<>();
-        // SCRATCH:
-        // use this to control game of life flow
-        // refresh and render the sheet here?
-
-        // Iterate through each cell in the sheet
-        // For each cell, check whether the cell is On in the next state (isOnNext)
-        // if isOnNext returns true, add said CellLocation to a List
-
-        // if isOnNext returns false, skip over
-
-        // on tick (i.e. each time simulate life is called), update said cells to 1
-        // any CellLocations not in the List will be updated to a Nothing instance?
-        // (Or just an empty string see how it goes)
-
-        // END SCRATCH
 
         // Iterate through each cell in the sheet:
         for (int row = 0; row < sheet.getRows(); row++) {
@@ -95,18 +109,14 @@ public class Life implements Feature, Tick {
         renderNext(nextOns);
     }
 
+    /**
+     * Decides if a cell is on in the next tick or not
+     *
+     * @param cell the cell to determine next state
+     *
+     * @return true if the cell is on in the next tick, false if otherwise
+     */
     public boolean isOnNext(CellLocation cell) {
-        // SCRATCH:
-        // Given a certain cell, check the surrounding cells with edgeSum
-        // Thus return a boolean whether the cell will be on in the next tick or not
-        // If cell == "1":
-            // Any on cell with fewer than two on neighbours turns off
-            // Any on cell with two or three on neighbours stays on
-            // Any on cell with more than three on neighbours turns off
-        // If cell != "1":
-            // Any off cell with exactly three on neighbours turns on, otherwise it stays off
-
-        // END SCRATCH
 
         Expression cellValue = sheet.valueAt(cell);
         int edgeSum = getEdgeSum(cell);
@@ -122,10 +132,8 @@ public class Life implements Feature, Tick {
 
         if (!Objects.equals(cellValue.render(), "1")) {
             // Apply rules for "OFF" cells
-            if (edgeSum == 3) {
-                // Any off cell with exactly three on neighbours turns on
-                return true;
-            }
+            // Any off cell with exactly three on neighbours turns on
+            return edgeSum == 3;
         }
 
         // Otherwise cell turns off next state
@@ -133,12 +141,14 @@ public class Life implements Feature, Tick {
     }
 
 
+    /**
+     * Obtain the sum of neighbour values around a cell
+     *
+     * @param cell The cell to find the edge sum of
+     *
+     * @return  The edge sum of the cell input
+     */
     public int getEdgeSum(CellLocation cell) {
-        // SCRATCH:
-        // Calculate the edge sum of a specific cell
-        // Returns the edge sum of that cell
-        // Aims to help isOnNext
-
         // Extract the value of the cell
         Expression cellValue = sheet.valueAt(cell);
 
@@ -157,8 +167,8 @@ public class Life implements Feature, Tick {
                 int neighborCol = cellCol + j;
 
                 // Check if the neighbor is within the bounds of the sheet
-                if (neighborRow < 0 || neighborRow >= sheet.getRows() ||
-                        neighborCol < 0 || neighborCol >= sheet.getColumns()) {
+                if (neighborRow < 0 || neighborRow >= sheet.getRows()
+                        || neighborCol < 0 || neighborCol >= sheet.getColumns()) {
                     // Neighbor is out of bounds, so skip to the next iteration
                     continue;
                 }
@@ -183,6 +193,11 @@ public class Life implements Feature, Tick {
         return edgeSum;
     }
 
+    /**
+     * Renders the next cells to be turned on
+     * 
+     * @param nextOns The list of cells to be turned on in the next tick
+     */
     public void renderNext(List<CellLocation> nextOns) {
         // Iterate through each cell in the sheet
         for (int row = 0; row < sheet.getRows(); row++) {

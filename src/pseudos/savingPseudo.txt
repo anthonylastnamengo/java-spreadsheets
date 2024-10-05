@@ -1,0 +1,25 @@
+User is using a file.
+User wants to save the file.
+
+User selects Save File option:
+    FileSaving.java takes in a sheet instance (the sheet currently working on)
+    Constructor stores the sheet
+
+    program prompts for user to input a file destination:
+        user inputs file destination -> store in variable Optional<String> filePath //
+
+    if filePath null or invalid:
+        prompt.message -> invalid file because + whatever
+        return
+
+    otherwise:
+    pass file path to FileWriter(filePath) in the save(filePath) method.
+    BufferedWriter will write to a .txt file:
+        the sheet will be taken as input to a method: sheet.encode()
+
+
+Steps -> Implement:
+    Prompting an ask when feature is clicked
+    Storing file path provided as an Optional??
+    Checking if file path is valid or invalid
+
